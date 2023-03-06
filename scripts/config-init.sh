@@ -10,27 +10,45 @@ _is_sourced() {
 }
 
 
+
+_is_user_exists() {
+    if id "$1" &>/dev/null; then
+        echo \"$1\"' found'
+    else
+        echo \"$1\"' NOT found'
+    fi
+}
+    
+
 _main() {
 
     echo 
-    echo 'config init.'
+    echo 'checkout runtime environment.'
     echo 
 
-    # replace frontend repo
-    if [ ! -n "$API_SERVER_PORT" ]; then
-        echo "API_SERVER_PORT not defined, skip."
-    else
-        sed -i "s/localhost:9999/localhost:$API_SERVER_PORT/g" /opt/illa/illa-builder/assets/*.js
-    fi
-    if [ ! -n "$API_SERVER_ADDRESS" ]; then
-        echo "API_SERVER_ADDRESS not defined, skip."
-    else
-        sed -i "s/localhost/$API_SERVER_ADDRESS/g" /opt/illa/illa-builder/assets/*.js
-    fi
+    # check kernel and lib version
+    I_UNAME_INFO=`uname -a`
+    I_GLIBC_VERSION=`ldd --version| grep 'ldd'`
+
+    
+
+
+    # output
+    echo 'kernel version: '${I_UNAME_INFO}
+    echo 'glibc version: '${I_GLIBC_VERSION}
+
+    # check user id
+    echo "detect user:" $(_is_user_exists 'root') 
+    echo "detect user:" $(_is_user_exists 'postgres') 
+    echo "detect user:" $(_is_user_exists 'minio') 
+    echo "detect user:" $(_is_user_exists 'envoy') 
+    echo "detect user:" $(_is_user_exists 'illa') 
+
+
 
 
     echo 
-    echo 'config init done.'
+    echo 'checkout runtime environment done.'
     echo 
 
 }

@@ -61,6 +61,12 @@ nginx &
 gosu envoy /usr/local/bin/envoy -c /opt/illa/envoy/illa-unit-ingress.yaml &
 
 
+# post init
+echo
+echo '[post init]'
+echo
+/opt/illa/post-init.sh
+
 # loop
 while true; do
     sleep 1;

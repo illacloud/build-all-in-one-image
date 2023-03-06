@@ -134,6 +134,7 @@ RUN set -eux; \
     netbase \
     wget \
     dumb-init \
+    procps \
     ; \
     rm -rf /var/lib/apt/lists/*
 
