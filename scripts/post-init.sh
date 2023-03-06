@@ -22,6 +22,8 @@ _check_process() {
     
 
 _main() {
+    # watting process start
+    sleep 10 
 
     echo 
     echo 'checkout post init status.'
