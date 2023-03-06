@@ -339,8 +339,10 @@ RUN chmod +x /opt/illa/database/postgres-init.sh
 #
 COPY scripts/main.sh /opt/illa/
 COPY scripts/config-init.sh /opt/illa/
+COPY scripts/post-init.sh /opt/illa/
 RUN chmod +x /opt/illa/main.sh 
 RUN chmod +x /opt/illa/config-init.sh 
+RUN chmod +x /opt/illa/post-init.sh 
 
 #
 # run
