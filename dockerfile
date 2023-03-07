@@ -303,6 +303,9 @@ RUN chmod +x /opt/illa/minio/minio-entrypoint.sh
 #
 # copy envoy
 #
+ENV ENVOY_UID 0 # set to root for envoy listing on 80 prot
+ENV ENVOY_GID 0
+
 RUN mkdir -p /opt/illa/envoy
 RUN mkdir -p /etc/envoy
 

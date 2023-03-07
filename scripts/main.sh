@@ -58,7 +58,7 @@ echo
 echo '[run ingress and gateway]'
 echo
 nginx &
-gosu envoy /usr/local/bin/envoy -c /opt/illa/envoy/illa-unit-ingress.yaml &
+/usr/local/bin/envoy -c /opt/illa/envoy/illa-unit-ingress.yaml &
 
 
 # post init
