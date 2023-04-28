@@ -23,6 +23,7 @@ echo
 echo '[run entrypoint files]'
 echo
 /opt/illa/database/postgres-entrypoint.sh 
+/opt/illa/redis/redis-entrypoint.sh 
 /opt/illa/minio/minio-entrypoint.sh 
 /opt/illa/envoy/envoy-entrypoint.sh
 
@@ -31,6 +32,12 @@ echo
 echo '[run postgres]'
 echo
 gosu postgres postgres & 
+
+# run redis
+echo
+echo '[run redis]'
+echo
+gosu redis redis-server & 
 
 # run minio
 echo

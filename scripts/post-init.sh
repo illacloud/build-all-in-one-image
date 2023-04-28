@@ -32,6 +32,10 @@ _main() {
     echo 'checking porcess postgres:'
     echo "$(_check_process 'postgres')"
     echo 
+
+    echo 'checking porcess redis:'
+    echo "$(_check_process 'redis-server')"
+    echo 
     
     echo 'checking porcess minio:'
     echo "$(_check_process 'minio')"

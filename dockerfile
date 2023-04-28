@@ -92,7 +92,12 @@ RUN make all
 RUN ls -alh ./bin/illa-supervisor-backend
 RUN ls -alh ./bin/illa-supervisor-backend-internal
 
+#
+# build redis
+#
+FROM redis:latest as cache-redis
 
+RUN ls -alh /usr/local/bin/redis*
 
 #
 # build minio
@@ -153,6 +158,7 @@ RUN set -ex; \
 #
 RUN adduser --group --system envoy
 RUN adduser --group --system minio
+RUN groupadd -r -g 1999 redis && useradd -r -g redis -u 1999 redis
 RUN set -eux; \
     groupadd -r illa --gid=2022; \
     useradd -r -g illa --uid=2022 --home-dir=/opt/illa/ --shell=/bin/bash illa; \
@@ -285,6 +291,26 @@ COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
 RUN rm /etc/nginx/conf.d/default.conf
 
+#
+# copy redis
+#
+RUN mkdir -p /opt/illa/cache-data/
+RUN mkdir -p /opt/illa/redis/
+RUN chown -fR redis:redis /opt/illa/cache-data/
+RUN chown -fR redis:redis /opt/illa/redis/
+
+COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark  
+COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof  
+COPY --from=cache-redis /usr/local/bin/redis-check-rdb /usr/local/bin/redis-check-rdb  
+COPY --from=cache-redis /usr/local/bin/redis-cli       /usr/local/bin/redis-cli        
+COPY --from=cache-redis /usr/local/bin/redis-sentinel  /usr/local/bin/redis-sentinel   
+COPY --from=cache-redis /usr/local/bin/redis-server    /usr/local/bin/redis-server      
+
+COPY scripts/redis-entrypoint.sh    /opt/illa/redis  
+RUN chmod +x /opt/illa/redis/redis-entrypoint.sh
+
+VOLUME /opt/illa/cache-data/
+WORKDIR /opt/illa/cache-data/
 
 #
 # copy minio

@@ -40,6 +40,7 @@ _main() {
     # check user id
     echo "detect user:" $(_is_user_exists 'root') 
     echo "detect user:" $(_is_user_exists 'postgres') 
+    echo "detect user:" $(_is_user_exists 'redis') 
     echo "detect user:" $(_is_user_exists 'minio') 
     echo "detect user:" $(_is_user_exists 'envoy') 
     echo "detect user:" $(_is_user_exists 'illa') 
