@@ -1,0 +1,81 @@
+#
+# build redis
+#
+FROM redis:latest as cache-redis
+
+RUN ls -alh /usr/local/bin/redis*; ls -alh /usr/local/bin/gosu;
+
+
+
+# 
+# Assembly all-in-one image
+#
+FROM postgres:14.5-bullseye as runner
+
+
+#
+# init environment & install required debug & runtime tools
+#
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    netbase \
+    wget \
+    telnet \
+    gnupg \
+    dirmngr \
+    dumb-init \
+    procps \
+    ; \
+    rm -rf /var/lib/apt/lists/*
+
+
+
+
+# 
+# init working folder and users
+#
+RUN mkdir /opt/illa
+RUN adduser --group --system redis
+
+#
+# copy gosu
+#
+
+RUN gosu --version; \
+    gosu nobody true
+
+#
+# copy redis
+#
+RUN mkdir -p /opt/illa/cache-data/
+RUN mkdir -p /opt/illa/redis/
+RUN chown -fR redis:redis /opt/illa/cache-data/
+RUN chown -fR redis:redis /opt/illa/redis/
+
+
+COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark  
+COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof  
+COPY --from=cache-redis /usr/local/bin/redis-check-rdb /usr/local/bin/redis-check-rdb  
+COPY --from=cache-redis /usr/local/bin/redis-cli       /usr/local/bin/redis-cli        
+COPY --from=cache-redis /usr/local/bin/redis-sentinel  /usr/local/bin/redis-sentinel   
+COPY --from=cache-redis /usr/local/bin/redis-server    /usr/local/bin/redis-server      
+
+COPY scripts/redis-entrypoint.sh    /opt/illa/redis  
+RUN chmod +x /opt/illa/redis/redis-entrypoint.sh
+
+
+#
+# add main scripts
+#
+COPY scripts/main.sh /opt/illa/
+RUN chmod +x /opt/illa/main.sh 
+
+#
+# run
+#
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+EXPOSE 80
+CMD ["/opt/illa/main.sh"]
