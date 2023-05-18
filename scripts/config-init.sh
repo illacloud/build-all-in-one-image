@@ -33,6 +33,10 @@ _grant_permission_to_now_user() {
     
 }
     
+_checkout_gosu() {
+    local gosu_versoin; gosu_versoin=`gosu --version`
+    echo \"$gosu_version\"
+}
 
 _main() {
 
@@ -59,6 +63,9 @@ _main() {
 
     # grant permission
     _grant_permission_to_now_user
+    
+    # check out gosu info
+    _checkout_gosu
 
     echo 
     echo 'checkout runtime environment done.'
