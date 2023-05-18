@@ -20,7 +20,7 @@ _is_user_exists() {
 }
 
 _checkout_now_user() {
-    idinfo=`id`
+    local idinfo; idinfo=`id`
     echo \"$idinfo\"
 }
 
