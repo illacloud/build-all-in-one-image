@@ -5,6 +5,26 @@ FROM redis:latest as cache-redis
 
 RUN ls -alh /usr/local/bin/redis*; ls -alh /usr/local/bin/gosu;
 
+#
+# build minio
+#
+FROM minio/minio:edge as drive-minio
+
+RUN ls -alh /opt/bin/minio
+
+
+#
+# build envoy
+#
+FROM envoyproxy/envoy:v1.18.2 as ingress-envoy
+
+RUN ls -alh /etc/envoy
+
+RUN ls -alh /usr/local/bin/envoy* 
+RUN ls -alh /usr/local/bin/su-exec 
+RUN ls -alh /etc/envoy/envoy.yaml
+RUN ls -alh  /docker-entrypoint.sh 
+
 
 
 # 
