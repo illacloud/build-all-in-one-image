@@ -12,10 +12,20 @@ echo '/ $$   |$$       |$$       |$$ |  $$ |      $$    $$/ $$    $$/ / $$   |$$
 echo '$$$$$$/ $$$$$$$$/ $$$$$$$$/ $$/   $$/       $$$$$$$/   $$$$$$/  $$$$$$/ $$$$$$$$/ $$$$$$$/  $$$$$$$$/ $$/   $$/   '
 echo                                                                                                            
 
+# default config
+export PGDATA=/opt/illa/database/pgdata 
+export MINIODATA=/opt/illa/drive/
+
+# dump config
+echo 
+echo 'postgres database files are in: '$PGDATA
+echo 'minio storage files are in: '$MINIODATA
+
 # init
 echo
 echo '[init]'
 echo
+current_user="$(id -u)"
 /opt/illa/config-init.sh
 
 # run entrypoint files
@@ -33,6 +43,7 @@ echo '[run postgres]'
 echo
 gosu postgres postgres & 
 
+
 # run redis
 echo
 echo '[run redis]'
@@ -43,7 +54,7 @@ gosu redis redis-server &
 echo
 echo '[run minio]'
 echo
-gosu minio /usr/local/bin/minio server /opt/illa/drive/ &
+gosu minio /usr/local/bin/minio server $MINIODATA &
 
 # init data
 echo
@@ -64,7 +75,7 @@ echo
 echo
 echo '[run ingress and gateway]'
 echo
-nginx &
+gosu nginx nginx &
 /usr/local/bin/envoy -c /opt/illa/envoy/illa-unit-ingress.yaml &
 
 

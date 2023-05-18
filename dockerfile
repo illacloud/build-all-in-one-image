@@ -123,7 +123,6 @@ RUN ls -alh  /docker-entrypoint.sh
 # 
 # build runner images
 #
-
 FROM postgres:14.5-bullseye as runner
 
 #
@@ -156,15 +155,19 @@ RUN set -ex; \
 #
 # set user 
 #
+COPY config/system/group /opt/illa/
+RUN cat /opt/illa/group > /etc/group; rm /opt/illa/group;
+
 RUN adduser --group --system envoy
 RUN adduser --group --system minio
-RUN groupadd -r -g 1999 redis && useradd -r -g redis -u 1999 redis
+RUN adduser --group --system redis
+RUN adduser --group --system nginx
+RUN adduser --group --system illa
+
 RUN set -eux; \
-    groupadd -r illa --gid=2022; \
-    useradd -r -g illa --uid=2022 --home-dir=/opt/illa/ --shell=/bin/bash illa; \
-    chown -R illa:illa /opt/illa/
+    chown -R illa:illa /opt/illa/; 
 
-
+    
 ## install web server
 ENV NGINX_VERSION   1.22.0
 ENV NJS_VERSION     0.7.6
@@ -172,9 +175,6 @@ ENV PKG_RELEASE     1~bullseye
 ENV NGINX_GPGKEY    573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
 
 RUN set -x \
-    # create nginx user/group first, to be consistent throughout docker variants
-    && addgroup --system --gid 101 nginx \
-    && adduser --system --disabled-login --ingroup nginx --no-create-home --home /nonexistent --gecos "nginx user" --shell /bin/false --uid 101 nginx \
     && apt-get update \
     && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
     ; \
@@ -287,6 +287,8 @@ COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/d
 #
 # copy nginx
 #
+RUN sed -i -e 's#/var/run/nginx.pid#/opt/illa/nginx.pid#g' /etc/nginx/nginx.conf
+RUN touch /opt/illa/nginx.pid 
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
 RUN rm /etc/nginx/conf.d/default.conf
@@ -296,8 +298,6 @@ RUN rm /etc/nginx/conf.d/default.conf
 #
 RUN mkdir -p /opt/illa/cache-data/
 RUN mkdir -p /opt/illa/redis/
-RUN chown -fR redis:redis /opt/illa/cache-data/
-RUN chown -fR redis:redis /opt/illa/redis/
 
 COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark  
 COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof  
@@ -317,8 +317,6 @@ WORKDIR /opt/illa/cache-data/
 #
 RUN mkdir -p /opt/illa/drive/
 RUN mkdir -p /opt/illa/minio/
-RUN chown -fR minio:minio /opt/illa/minio/
-RUN chown -fR minio:minio /opt/illa/drive/
 
 COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio 
 
@@ -356,7 +354,6 @@ RUN nginx -t
 # init database 
 #
 RUN mkdir -p /opt/illa/database/
-RUN ln -s /var/lib/postgresql /opt/illa/database/
 
 COPY scripts/postgres-entrypoint.sh  /opt/illa/database/
 COPY scripts/postgres-init.sh /opt/illa/database

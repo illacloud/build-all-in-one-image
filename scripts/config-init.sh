@@ -18,6 +18,20 @@ _is_user_exists() {
         echo \"$1\"' NOT found'
     fi
 }
+
+_checkout_now_user() {
+    idinfo=`id`
+    echo \"$idinfo\"
+}
+
+
+_grant_permission_to_now_user() {
+    local current_user; current_user="$(id -u)"
+    local current_user_name; current_user_name="$(id -un)"
+    local current_group; current_group="$(id -g)"
+
+    
+}
     
 
 _main() {
@@ -38,15 +52,13 @@ _main() {
     echo 'glibc version: '${I_GLIBC_VERSION}
 
     # check user id
-    echo "detect user:" $(_is_user_exists 'root') 
+    echo "detect user:" $(_is_user_exists 'root')
     echo "detect user:" $(_is_user_exists 'postgres') 
-    echo "detect user:" $(_is_user_exists 'redis') 
-    echo "detect user:" $(_is_user_exists 'minio') 
-    echo "detect user:" $(_is_user_exists 'envoy') 
-    echo "detect user:" $(_is_user_exists 'illa') 
+    echo "current user is:" $(_checkout_now_user) 
 
 
-
+    # grant permission
+    _grant_permission_to_now_user
 
     echo 
     echo 'checkout runtime environment done.'
