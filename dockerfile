@@ -1,9 +1,3 @@
-# Description
-# 
-
-# postgres data at: /opt/illa/database/
-# minio data at:    /opt/illa/drive/
-
 # 
 # build illa-builder-frontend
 #
@@ -21,14 +15,10 @@ RUN git submodule init; \
     git submodule update;
 
 RUN npm install -g pnpm
-RUN whereis pnpm
-RUN whereis node
-
-## build 
+RUN whereis pnpm && whereis node
 
 RUN pnpm install
 RUN pnpm build-self
-
 
 
 # 
@@ -89,8 +79,8 @@ RUN cat ./Makefile
 
 RUN make all 
 
-RUN ls -alh ./bin/illa-supervisor-backend
-RUN ls -alh ./bin/illa-supervisor-backend-internal
+RUN ls -alh ./bin/*
+
 
 #
 # build redis
@@ -99,6 +89,7 @@ FROM redis:latest as cache-redis
 
 RUN ls -alh /usr/local/bin/redis*
 
+
 #
 # build minio
 #
@@ -106,6 +97,12 @@ FROM minio/minio:edge as drive-minio
 
 RUN ls -alh /opt/bin/minio
 
+#
+# build nginx
+#
+FROM nginx:mainline-bullseye as webserver-nginx
+
+RUN ls -alh /usr/sbin/nginx; ls -alh /usr/lib/nginx; ls -alh /etc/nginx; ls -alh /usr/share/nginx;
 
 #
 # build envoy
@@ -121,15 +118,14 @@ RUN ls -alh  /docker-entrypoint.sh
 
 
 # 
-# build runner images
+# Assembly all-in-one image
 #
 FROM postgres:14.5-bullseye as runner
 
-#
-# init
-# 
-RUN mkdir /opt/illa
 
+#
+# init environment & install required debug & runtime tools
+#
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -137,135 +133,27 @@ RUN set -eux; \
     curl \
     netbase \
     wget \
+    telnet \
+    gnupg \
+    dirmngr \
     dumb-init \
     procps \
+    gettext-base \
     ; \
     rm -rf /var/lib/apt/lists/*
 
-RUN set -ex; \
-    if ! command -v gpg > /dev/null; then \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-    gnupg \
-    dirmngr \
-    ; \
-    rm -rf /var/lib/apt/lists/*; \
-    fi
 
-#
-# set user 
-#
-COPY config/system/group /opt/illa/
-RUN cat /opt/illa/group > /etc/group; rm /opt/illa/group;
 
+
+# 
+# init working folder and users
+#
+RUN mkdir /opt/illa
 RUN adduser --group --system envoy
 RUN adduser --group --system minio
 RUN adduser --group --system redis
 RUN adduser --group --system nginx
 RUN adduser --group --system illa
-
-RUN set -eux; \
-    chown -R illa:illa /opt/illa/; 
-
-    
-## install web server
-ENV NGINX_VERSION   1.22.0
-ENV NJS_VERSION     0.7.6
-ENV PKG_RELEASE     1~bullseye
-ENV NGINX_GPGKEY    573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62
-
-RUN set -x \
-    && apt-get update \
-    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
-    ; \
-    found=''; \
-    for server in \
-    hkp://keyserver.ubuntu.com:80 \
-    pgp.mit.edu \
-    ; do \
-    echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
-    apt-key adv --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
-    done; \
-    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
-    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
-    && dpkgArch="$(dpkg --print-architecture)" \
-    && nginxPackages=" \
-    nginx=${NGINX_VERSION}-${PKG_RELEASE} \
-    nginx-module-xslt=${NGINX_VERSION}-${PKG_RELEASE} \
-    nginx-module-geoip=${NGINX_VERSION}-${PKG_RELEASE} \
-    nginx-module-image-filter=${NGINX_VERSION}-${PKG_RELEASE} \
-    nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${PKG_RELEASE} \
-    " \
-    && case "$dpkgArch" in \
-    amd64|arm64) \
-    # arches officialy built by upstream
-    echo "deb https://nginx.org/packages/debian/ bullseye nginx" >> /etc/apt/sources.list.d/nginx.list \
-    && apt-get update \
-    ;; \
-    *) \
-    # we're on an architecture upstream doesn't officially build for
-    # let's build binaries from the published source packages
-    echo "deb-src https://nginx.org/packages/debian/ bullseye nginx" >> /etc/apt/sources.list.d/nginx.list \
-    \
-    # new directory for storing sources and .deb files
-    && tempDir="$(mktemp -d)" \
-    && chmod 777 "$tempDir" \
-    # (777 to ensure APT's "_apt" user can access it too)
-    \
-    # save list of currently-installed packages so build dependencies can be cleanly removed later
-    && savedAptMark="$(apt-mark showmanual)" \
-    \
-    # build .deb files from upstream's source packages (which are verified by apt-get)
-    && apt-get update \
-    && apt-get build-dep -y $nginxPackages \
-    && ( \
-    cd "$tempDir" \
-    && DEB_BUILD_OPTIONS="nocheck parallel=$(nproc)" \
-    apt-get source --compile $nginxPackages \
-    ) \
-    # we don't remove APT lists here because they get re-downloaded and removed later
-    \
-    # reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
-    # (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
-    && apt-mark showmanual | xargs apt-mark auto > /dev/null \
-    && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
-    \
-    # create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
-    && ls -lAFh "$tempDir" \
-    && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
-    && grep '^Package: ' "$tempDir/Packages" \
-    && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
-    # work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
-    #   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
-    #   ...
-    #   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
-    && apt-get -o Acquire::GzipIndexes=false update \
-    ;; \
-    esac \
-    \
-    && apt-get install --no-install-recommends --no-install-suggests -y \
-    $nginxPackages \
-    gettext-base \
-    curl \
-    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
-    \
-    # if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
-    && if [ -n "$tempDir" ]; then \
-    apt-get purge -y --auto-remove \
-    && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
-    fi \
-    # forward request and error logs to docker log collector
-    && ln -sf /dev/stdout /var/log/nginx/access.log \
-    && ln -sf /dev/stderr /var/log/nginx/error.log \
-    # create a docker-entrypoint.d directory
-    && mkdir /docker-entrypoint.d
-
-RUN ls -alh /etc/nginx/
-
-
-#
-# assembly final image
-#
 
 #
 # copy illa-builder-backend bin
@@ -285,19 +173,20 @@ COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/d
 
 
 #
-# copy nginx
+# copy gosu
 #
-RUN sed -i -e 's#/var/run/nginx.pid#/opt/illa/nginx.pid#g' /etc/nginx/nginx.conf
-RUN touch /opt/illa/nginx.pid 
-COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
-COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
-RUN rm /etc/nginx/conf.d/default.conf
+
+RUN gosu --version; \
+	gosu nobody true
 
 #
 # copy redis
 #
-RUN mkdir -p /opt/illa/cache-data/
-RUN mkdir -p /opt/illa/redis/
+RUN mkdir -p /opt/illa/cache-data/; \
+    mkdir -p /opt/illa/redis/; \
+    chown -fR redis:redis /opt/illa/cache-data/; \
+    chown -fR redis:redis /opt/illa/redis/; 
+
 
 COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark  
 COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof  
@@ -309,14 +198,15 @@ COPY --from=cache-redis /usr/local/bin/redis-server    /usr/local/bin/redis-serv
 COPY scripts/redis-entrypoint.sh    /opt/illa/redis  
 RUN chmod +x /opt/illa/redis/redis-entrypoint.sh
 
-VOLUME /opt/illa/cache-data/
-WORKDIR /opt/illa/cache-data/
 
 #
 # copy minio
 #
-RUN mkdir -p /opt/illa/drive/
-RUN mkdir -p /opt/illa/minio/
+RUN mkdir -p /opt/illa/drive/; \
+    mkdir -p /opt/illa/minio/; \
+    chown -fR minio:minio /opt/illa/drive/; \
+    chown -fR minio:minio /opt/illa/minio/;
+
 
 COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio 
 
@@ -325,13 +215,44 @@ RUN chmod +x /opt/illa/minio/minio-entrypoint.sh
 
 
 #
+# copy nginx
+#
+RUN mkdir /opt/illa/nginx
+
+COPY --from=webserver-nginx /usr/sbin/nginx  /usr/sbin/nginx 
+COPY --from=webserver-nginx /usr/lib/nginx   /usr/lib/nginx 
+COPY --from=webserver-nginx /etc/nginx       /etc/nginx 
+COPY --from=webserver-nginx /usr/share/nginx /usr/share/nginx 
+
+COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
+COPY scripts/nginx-entrypoint.sh /opt/illa/nginx
+
+RUN set -x \
+    && mkdir /var/log/nginx/ \
+    && mkdir /var/cache/nginx/ \
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+    && touch /tmp/nginx.pid \
+    && chmod 0777 /tmp/nginx.pid \
+    && rm /etc/nginx/conf.d/default.conf \
+    && chmod +x /opt/illa/nginx/nginx-entrypoint.sh \
+    && chown -R $UID:0 /var/cache/nginx \
+    && chmod -R g+w /var/cache/nginx \
+    && chown -R $UID:0 /etc/nginx \
+    && chmod -R g+w /etc/nginx
+
+RUN nginx -t
+
+
+#
 # copy envoy
 #
 ENV ENVOY_UID 0 # set to root for envoy listing on 80 prot
 ENV ENVOY_GID 0
 
-RUN mkdir -p /opt/illa/envoy
-RUN mkdir -p /etc/envoy
+RUN mkdir -p /opt/illa/envoy \
+    && mkdir -p /etc/envoy
 
 COPY --from=ingress-envoy  /usr/local/bin/envoy* /usr/local/bin/
 COPY --from=ingress-envoy  /usr/local/bin/su-exec  /usr/local/bin/
@@ -339,36 +260,42 @@ COPY --from=ingress-envoy  /etc/envoy/envoy.yaml  /etc/envoy/
 
 COPY config/envoy/illa-unit-ingress.yaml /opt/illa/envoy
 COPY scripts/envoy-entrypoint.sh /opt/illa/envoy
-RUN chmod +x /opt/illa/envoy/envoy-entrypoint.sh
 
-RUN ls -alh /usr/local/bin/envoy* 
-RUN ls -alh /usr/local/bin/su-exec 
-RUN ls -alh /etc/envoy/envoy.yaml
-
-
-# test config
-RUN nginx -t
+RUN chmod +x /opt/illa/envoy/envoy-entrypoint.sh \
+    && ls -alh /usr/local/bin/envoy* \
+    && ls -alh /usr/local/bin/su-exec \
+    && ls -alh /etc/envoy/envoy.yaml
 
 
 #
 # init database 
 #
-RUN mkdir -p /opt/illa/database/
+RUN mkdir -p /opt/illa/database/ \
+    && mkdir -p /opt/illa/postgres/
 
-COPY scripts/postgres-entrypoint.sh  /opt/illa/database/
-COPY scripts/postgres-init.sh /opt/illa/database
-RUN chmod +x /opt/illa/database/postgres-entrypoint.sh  
-RUN chmod +x /opt/illa/database/postgres-init.sh 
+COPY scripts/postgres-entrypoint.sh  /opt/illa/postgres
+COPY scripts/postgres-init.sh /opt/illa/postgres
+RUN chmod +x /opt/illa/postgres/postgres-entrypoint.sh \
+    && chmod +x /opt/illa/postgres/postgres-init.sh 
+
 
 #
 # add main scripts
 #
 COPY scripts/main.sh /opt/illa/
-COPY scripts/config-init.sh /opt/illa/
+COPY scripts/pre-init.sh /opt/illa/
 COPY scripts/post-init.sh /opt/illa/
 RUN chmod +x /opt/illa/main.sh 
-RUN chmod +x /opt/illa/config-init.sh 
+RUN chmod +x /opt/illa/pre-init.sh 
 RUN chmod +x /opt/illa/post-init.sh 
+
+#
+# modify global permission
+#  
+COPY config/system/group /opt/illa/
+RUN cat /opt/illa/group > /etc/group; rm /opt/illa/group
+RUN chown -fR illa:root /opt/illa
+RUN chmod 775 -fR /opt/illa
 
 #
 # run

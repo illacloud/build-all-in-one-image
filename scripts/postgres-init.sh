@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -Eeo pipefail
 
+# define color output
+BLACK='\033[0;30m'     
+DARKGRAY='\033[1;30m'
+RED='\033[0;31m'     
+LIGHTRED='\033[1;31m'
+GREEN='\033[0;32m'     
+LIGHTGREEN='\033[1;32m'
+ORANGE='\033[0;33m'           
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'     
+LIGHTBLUE='\033[1;34m'
+PURPLE='\033[0;35m'     
+LIGHTPURPLE='\033[1;35m'
+CYAN='\033[0;36m'     
+LIGHTCYAN='\033[1;36m'
+LIGHTGRAY='\033[0;37m'      
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
 # check to see if this file is being run or sourced from another script
 _is_sourced() {
 	# https://unix.stackexchange.com/a/215279
@@ -15,13 +34,23 @@ _main() {
 
 
 echo 
-echo '[postgres-init.sh] init illa_builder & illa_supervisor database.'
+echo -e "${LIGHTBLUE}[postgres-init.sh] init illa_builder & illa_supervisor database.${NC}"
 echo 
 
 # waitting for postgres init finished 
-# it should be over 18s, pre-postgres.sh will cost at least 18s on MacOS. 
-sleep 20 
+counter=0
+until /usr/bin/pg_isready -U postgres
+do  
+    sleep 1
+    echo "watting postgres database ready for connection ... $counter"
+    ((counter++))
+done
+ 
 
+# ok, init database and table.
+echo 
+echo -e "${LIGHTBLUE}init database.${NC}"
+echo 
 psql -U postgres postgres <<EOF
 
 -- init illa_builder
@@ -372,7 +401,7 @@ WHERE NOT EXISTS (
 EOF
 
 echo
-echo '[postgres-init.sh] init illa_builder database done.'
+echo -e "${LIGHTBLUE}[postgres-init.sh] init illa_builder database done.${NC}"
 echo
 
 }

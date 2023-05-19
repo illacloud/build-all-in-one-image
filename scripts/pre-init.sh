@@ -1,6 +1,25 @@
 #!/usr/bin/env bash
 set -Eeo pipefail
 
+# define color output
+BLACK='\033[0;30m'     
+DARKGRAY='\033[1;30m'
+RED='\033[0;31m'     
+LIGHTRED='\033[1;31m'
+GREEN='\033[0;32m'     
+LIGHTGREEN='\033[1;32m'
+ORANGE='\033[0;33m'           
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'     
+LIGHTBLUE='\033[1;34m'
+PURPLE='\033[0;35m'     
+LIGHTPURPLE='\033[1;35m'
+CYAN='\033[0;36m'     
+LIGHTCYAN='\033[1;36m'
+LIGHTGRAY='\033[0;37m'      
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
 # check to see if this file is being run or sourced from another script
 _is_sourced() {
 	# https://unix.stackexchange.com/a/215279
@@ -10,6 +29,13 @@ _is_sourced() {
 }
 
 
+_checkout_runtime_env() {
+    local uname_info; uname_info=`uname -a`
+    local glibc_version; glibc_version=`ldd --version| grep 'ldd'`
+     # output
+    echo 'kernel version: '${uname_info}
+    echo 'glibc version: '${glibc_version}
+}
 
 _is_user_exists() {
     if id "$1" &>/dev/null; then
@@ -34,27 +60,22 @@ _grant_permission_to_now_user() {
 }
     
 _checkout_gosu() {
-    local gosu_versoin; gosu_versoin=`gosu --version`
-    echo \"$gosu_version\"
+    local gosu_versoin; gosu_versoin=`/usr/local/bin/gosu --version`
+    echo "gosu info: \"$gosu_version\""
 }
 
 _main() {
 
     echo 
-    echo 'checkout runtime environment.'
+    echo -e "${LIGHTBLUE}[checkout runtime environment]${NC}"
     echo 
 
     # check kernel and lib version
-    I_UNAME_INFO=`uname -a`
-    I_GLIBC_VERSION=`ldd --version| grep 'ldd'`
+    _checkout_runtime_env    
 
-    
-
-
-    # output
-    echo 'kernel version: '${I_UNAME_INFO}
-    echo 'glibc version: '${I_GLIBC_VERSION}
-
+    # check out gosu info
+    _checkout_gosu
+   
     # check user id
     echo "detect user:" $(_is_user_exists 'root')
     echo "detect user:" $(_is_user_exists 'postgres') 
@@ -64,11 +85,10 @@ _main() {
     # grant permission
     _grant_permission_to_now_user
     
-    # check out gosu info
-    _checkout_gosu
+
 
     echo 
-    echo 'checkout runtime environment done.'
+    echo -e "${LIGHTBLUE}[checkout runtime environment] done.${NC}"
     echo 
 
 }
