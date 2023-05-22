@@ -91,11 +91,8 @@ echo
 echo
 echo -e "${LIGHTBLUE}[run redis-server]${NC}"
 echo
-if [ $current_user = '0' ]; then
-    gosu redis redis-server 2>&1 | _label "[redis] " & 
-else 
-    redis-server 2>&1 | _label "[redis] " & 
-fi
+redis-server 2>&1 | _label "[redis] " & 
+
 
 #
 # run minio
@@ -103,11 +100,8 @@ fi
 echo
 echo -e "${LIGHTBLUE}[run minio]${NC}"
 echo
-if [ $current_user = '0' ]; then
-    gosu minio /usr/local/bin/minio server $MINIODATA 2>&1 | _label "[minio] "  &
-else
-    /usr/local/bin/minio server $MINIODATA 2>&1 | _label "[minio] "  &
-fi
+/usr/local/bin/minio server $MINIODATA 2>&1 | _label "[minio] "  &
+
 
 # run illa units
 echo
@@ -124,11 +118,7 @@ echo
 echo
 echo -e "${LIGHTBLUE}[run nginx]${NC}"
 echo
-if [ $current_user = '0' ]; then
-    gosu nginx nginx 2>&1 | _label "[nginx] "  &
-else
-    nginx 2>&1 | _label "[nginx] "  &
-fi
+nginx -e /dev/stderr 2>&1 | _label "[nginx] "  &
 
 
 #

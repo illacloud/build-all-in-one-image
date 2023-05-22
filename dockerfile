@@ -149,11 +149,13 @@ RUN set -eux; \
 # init working folder and users
 #
 RUN mkdir /opt/illa
-RUN adduser --group --system envoy
-RUN adduser --group --system minio
-RUN adduser --group --system redis
-RUN adduser --group --system nginx
-RUN adduser --group --system illa
+RUN addgroup --system --gid 102 nginx \
+    && adduser --system --disabled-login --ingroup nginx --no-create-home --home /nonexistent --gecos "nginx user" --shell /bin/false --uid 102 nginx \
+    && adduser --group --system envoy \
+    && adduser --group --system minio \
+    && adduser --group --system redis \
+    && adduser --group --system illa \
+    && cat /etc/group 
 
 #
 # copy illa-builder-backend bin
@@ -230,6 +232,7 @@ COPY scripts/nginx-entrypoint.sh /opt/illa/nginx
 
 RUN set -x \
     && mkdir /var/log/nginx/ \
+    && chmod 0777 /var/log/nginx/ \
     && mkdir /var/cache/nginx/ \
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log \
