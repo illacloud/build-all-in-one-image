@@ -37,15 +37,18 @@ echo
 echo -e "${LIGHTBLUE}[postgres-init.sh] init illa_builder & illa_supervisor database.${NC}"
 echo 
 
-# waitting for postgres init finished 
-counter=0
-until /usr/bin/pg_isready -U postgres
-do  
-    sleep 1
-    echo "watting postgres database ready for connection ... $counter"
-    ((counter++))
+
+# check if postgres really starting
+RETRIES=5
+until psql -U postgres postgres -c "select 1" > /dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+  echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
+  sleep 5
 done
- 
+
+if [ $RETRIES -eq 0 ]; then
+    echo -e "${RED}[FATAL] CAN NOT CONNECT TO POSTGERS DATABASE, PLEASE CHECK YOUR DATABASE INIT STATUS AND FOLDER PERMISSIONS.${NC}"
+    return 1
+fi
 
 # ok, init database and table.
 echo 
