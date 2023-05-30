@@ -304,5 +304,5 @@ RUN chmod 775 -fR /opt/illa
 # run
 #
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-EXPOSE 80
+EXPOSE 2022
 CMD ["/opt/illa/main.sh"]
