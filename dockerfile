@@ -85,7 +85,7 @@ RUN ls -alh ./bin/*
 #
 # build redis
 #
-FROM redis:latest as cache-redis
+FROM redis:6.2.7 as cache-redis
 
 RUN ls -alh /usr/local/bin/redis*
 
@@ -100,7 +100,7 @@ RUN ls -alh /opt/bin/minio
 #
 # build nginx
 #
-FROM nginx:mainline-bullseye as webserver-nginx
+FROM nginx:1.24-bullseye as webserver-nginx
 
 RUN ls -alh /usr/sbin/nginx; ls -alh /usr/lib/nginx; ls -alh /etc/nginx; ls -alh /usr/share/nginx;
 
