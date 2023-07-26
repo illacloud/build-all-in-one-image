@@ -19,7 +19,7 @@
 
 # Database DML & DDLs
 
-https://github.com/illacloud/build-all-in-one-image/blob/main/scripts/postgres-init.sh#230-L419
+https://github.com/illacloud/build-all-in-one-image/blob/c5061f5d8e208ab5d76ac0f06e68615058712062/scripts/postgres-init.sh#L230-L419
 
 
 
