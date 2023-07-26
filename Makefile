@@ -1,17 +1,17 @@
-.PHONY: build all test clean
+.PHONY: build all run-test run-non-root-test rm-test
 
 all: build 
 
-build-test:
-	docker build ./ -f ./Dockerfile -t illa-builder:refactor
+build:
+	docker build ./ -f ./Dockerfile -t illa-builder:local
 
 run-test:
-	docker run -d -p 8000:80 --name refactor -v /home/testing/illa-data:/opt/illa/database -v /home/testing/illa-drive:/opt/illa/drive illasoft/illa-builder:refactor
+	docker run -d -p 80:2022 --name illa_builder_local -v ~/illa-database:/opt/illa/database -v ~/illa-drive:/opt/illa/drive illa-builder:local
 
 run-non-root-test:
-	docker run -d -p 8000:80 --name refactor --user 1002:1002 -v /home/testing/illa-data:/opt/illa/database -v /home/testing/illa-drive:/opt/illa/drive illasoft/illa-builder:refactor
+	docker run -d -p 80:2022 --name illa_builder_local --user 1002:1002 -v ~/illa-database:/opt/illa/database -v ~/illa-drive:/opt/illa/drive illa-builder:local
 
 rm-test:
-	docker stop refactor; docker rm refactor;
+	docker stop illa_builder_local; docker rm illa_builder_local;
 
  	
