@@ -108,7 +108,7 @@ echo
 echo -e "${LIGHTBLUE}[run illa units]${NC}"
 echo
 /opt/illa/illa-builder-backend/bin/illa-builder-backend 2>&1 | _label "[illa-builder-backend] " &
-/opt/illa/illa-builder-backend/bin/illa-builder-backend-ws 2>&1 | _label "[illa-builder-backend-ws] " &
+/opt/illa/illa-builder-backend/bin/illa-builder-backend-websocket 2>&1 | _label "[illa-builder-backend-websocket] " &
 /opt/illa/illa-supervisor-backend/bin/illa-supervisor-backend 2>&1 | _label "[illa-supervisor-backend] " &
 /opt/illa/illa-supervisor-backend/bin/illa-supervisor-backend-internal 2>&1 | _label "[illa-supervisor-backend-internal] "  &
 
