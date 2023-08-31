@@ -76,8 +76,8 @@ _main() {
     echo "$(_check_process 'illa-builder-backend')"
     echo 
 
-    echo -e "${LIGHTBLUE}┌[checking porcess illa-builder-backend-ws]${NC}"
-    echo "$(_check_process 'illa-builder-backend-ws')"
+    echo -e "${LIGHTBLUE}┌[checking porcess illa-builder-backend-websocket]${NC}"
+    echo "$(_check_process 'illa-builder-backend-websocket')"
     echo 
 
     echo -e "${LIGHTBLUE}┌[checking porcess illa-supervisor-backend]${NC}"
