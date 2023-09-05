@@ -170,8 +170,7 @@ COPY --from=illa-supervisor-backend /opt/illa/illa-supervisor-backend /opt/illa/
 #
 # copy illa-builder-frontend
 #
-COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist/index.html /opt/illa/illa-builder-frontend/index.html
-COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist/assets /opt/illa/illa-builder-frontend/assets
+COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist /opt/illa/illa-builder-frontend
 
 
 #
