@@ -12,6 +12,7 @@ RUN pwd
 ARG FE=main
 RUN git clone -b ${FE} https://github.com/illacloud/illa-builder.git /opt/illa/illa-builder-frontend/
 RUN git submodule init; \
+    git submodule update; \
     git submodule foreach git checkout ${FE}
 
 RUN npm install -g pnpm
