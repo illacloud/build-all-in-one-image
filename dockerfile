@@ -25,7 +25,7 @@ RUN pnpm build-self
 # build illa-builder-backend & illa-builder-backend-ws
 #
 
-FROM golang:1.19-bullseye as illa-builder-backend
+FROM golang:1.20-bullseye as illa-builder-backend
 
 ## set env
 ENV LANG C.UTF-8
@@ -56,7 +56,7 @@ RUN ls -alh ./bin/*
 # build illa-supervisor-backend & illa-supervisor-backend-internal
 #
 
-FROM golang:1.19-bullseye as illa-supervisor-backend
+FROM golang:1.20-bullseye as illa-supervisor-backend
 
 ## set env
 ENV LANG C.UTF-8
