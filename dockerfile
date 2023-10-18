@@ -171,6 +171,7 @@ COPY --from=illa-supervisor-backend /opt/illa/illa-supervisor-backend /opt/illa/
 # copy illa-builder-frontend
 #
 COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist /opt/illa/illa-builder-frontend
+COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/cloud/dist /opt/illa/illa-cloud-frontend
 
 
 #
@@ -227,6 +228,7 @@ COPY --from=webserver-nginx /usr/share/nginx /usr/share/nginx
 
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
+COPY config/nginx/illa-cloud-frontend.conf /etc/nginx/conf.d/
 COPY scripts/nginx-entrypoint.sh /opt/illa/nginx
 
 RUN set -x \
