@@ -73,15 +73,39 @@ static_resources:
                             host_rewrite_literal: "127.0.0.1:9000"
                             cluster: illa_object_storage_unit
                         - match:
-                            prefix: "/"
+                            prefix: "/build"
                           route:
+                            prefix_rewrite: "/"
                             cluster: illa_builder_frontend_unit
+                        - match:
+                            prefix: "/cloud"
+                          route:
+                            prefix_rewrite: "/"
+                            cluster: illa_cloud_frontend_unit
+                        - match:
+                            path: "/"
+                          redirect:
+                            path_redirect: "/cloud"
+
                 http_filters:
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
 
   clusters:
+    - name: illa_cloud_frontend_unit
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      connect_timeout: 10s
+      load_assignment:
+        cluster_name: illa_cloud_frontend_unit
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: 127.0.0.1
+                      port_value: 7999
     - name: illa_builder_frontend_unit
       type: STRICT_DNS
       lb_policy: ROUND_ROBIN
