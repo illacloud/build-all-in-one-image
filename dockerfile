@@ -10,6 +10,12 @@ RUN cd /opt/illa/illa-builder-frontend
 RUN pwd
 
 ARG FE=main
+ARG FE_ILLA_MUI_LICENSE
+
+## set env
+ENV ILLA_MUI_LICENSE FE_ILLA_MUI_LICENSE
+
+
 RUN git clone -b ${FE} https://github.com/illacloud/illa-builder.git /opt/illa/illa-builder-frontend/
 RUN git submodule init; \
     git submodule update; 
