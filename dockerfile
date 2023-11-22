@@ -11,6 +11,7 @@ RUN pwd
 
 ARG FE=main
 ARG ILLA_MUI_LICENSE=testKey
+ARG TARGETOS TARGETARCH
 
 ## set env
 RUN git clone -b ${FE} https://github.com/illacloud/illa-builder.git /opt/illa/illa-builder-frontend/
@@ -45,11 +46,12 @@ RUN cd  /opt/illa/illa-builder-backend
 RUN ls -alh
 
 ARG BE=main
+ARG TARGETOS TARGETARCH
 RUN git clone -b ${BE} https://github.com/illacloud/builder-backend.git ./
 
 RUN cat ./Makefile
 
-RUN make all 
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make all 
 
 RUN ls -alh ./bin/* 
 
@@ -76,11 +78,12 @@ RUN cd  /opt/illa/illa-supervisor-backend
 RUN ls -alh
 
 ARG SBE=main
+ARG TARGETOS TARGETARCH
 RUN git clone -b ${SBE} https://github.com/illacloud/illa-supervisor-backend.git ./
 
 RUN cat ./Makefile
 
-RUN make all 
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH make all 
 
 RUN ls -alh ./bin/*
 
@@ -96,9 +99,9 @@ RUN ls -alh /usr/local/bin/redis*
 #
 # build minio
 #
-FROM minio/minio:edge as drive-minio
+FROM bitnami/minio:latest as drive-minio
 
-RUN ls -alh /opt/bin/minio
+RUN ls -alh /opt/bitnami/minio/bin
 
 #
 # build nginx
@@ -125,6 +128,7 @@ RUN ls -alh  /docker-entrypoint.sh
 #
 FROM postgres:14.5-bullseye as runner
 
+ARG TARGETOS TARGETARCH
 
 #
 # init environment & install required debug & runtime tools
@@ -139,9 +143,9 @@ RUN set -eux; \
     telnet \
     gnupg \
     dirmngr \
-    dumb-init \
     procps \
     gettext-base \
+    dumb-init \
     ; \
     rm -rf /var/lib/apt/lists/*
 
@@ -175,7 +179,6 @@ COPY --from=illa-supervisor-backend /opt/illa/illa-supervisor-backend /opt/illa/
 #
 COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist /opt/illa/illa-builder-frontend
 COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/cloud/dist /opt/illa/illa-cloud-frontend
-
 
 #
 # copy gosu
@@ -213,7 +216,7 @@ RUN mkdir -p /opt/illa/drive/; \
     chown -fR minio:minio /opt/illa/minio/;
 
 
-COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio 
+COPY --from=drive-minio /opt/bitnami/minio/bin/minio /usr/local/bin/minio 
 
 COPY scripts/minio-entrypoint.sh /opt/illa/minio
 RUN chmod +x /opt/illa/minio/minio-entrypoint.sh

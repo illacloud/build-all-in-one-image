@@ -3,7 +3,7 @@
 all: build 
 
 build:
-	docker build ./ -f ./Dockerfile -t illa-builder:local
+	docker buildx build --platform=linux/arm64,linux/amd64 ./ -f ./Dockerfile -t illasoft/illa-builder:local --push
 
 run-test:
 	docker run -d -p 80:2022 --name illa_builder_local -v ~/illa-database:/opt/illa/database -v ~/illa-drive:/opt/illa/drive illa-builder:local
