@@ -1,43 +1,19 @@
-# 
-# build illa-builder-frontend
 #
-
-FROM node:18-bullseye as illa-builder-frontend
-
-## clone frontend
-WORKDIR /opt/illa/illa-builder-frontend
-RUN cd /opt/illa/illa-builder-frontend
-RUN pwd
-
-ARG FE=main
-ARG ILLA_MUI_LICENSE=testKey
-
-## set env
-RUN git clone -b ${FE} https://github.com/illacloud/illa-builder.git /opt/illa/illa-builder-frontend/
-RUN git submodule init; \
-    git submodule update; 
-
-RUN npm install -g pnpm
-RUN whereis pnpm && whereis node
-
-RUN pnpm install
-RUN pnpm build-self
-
-
-# 
 # build illa-builder-backend & illa-builder-backend-ws
 #
 
-FROM golang:1.20-bullseye as illa-builder-backend
+FROM --platform=$BUILDPLATFORM golang:1.20-bullseye as illa-builder-backend
 
 ## set env
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
-
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETARCH
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=${TARGETARCH}
 
 ## build
 WORKDIR /opt/illa/illa-builder-backend
@@ -49,9 +25,9 @@ RUN git clone -b ${BE} https://github.com/illacloud/builder-backend.git ./
 
 RUN cat ./Makefile
 
-RUN make all 
+RUN make all
 
-RUN ls -alh ./bin/* 
+RUN ls -alh ./bin/*
 
 
 
@@ -59,16 +35,19 @@ RUN ls -alh ./bin/*
 # build illa-supervisor-backend & illa-supervisor-backend-internal
 #
 
-FROM golang:1.20-bullseye as illa-supervisor-backend
+FROM --platform=$BUILDPLATFORM golang:1.20-bullseye as illa-supervisor-backend
 
 ## set env
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+ARG TARGETARCH
 
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64
+    GOARCH=${TARGETARCH}
 
 ## build
 WORKDIR /opt/illa/illa-supervisor-backend
@@ -80,7 +59,7 @@ RUN git clone -b ${SBE} https://github.com/illacloud/illa-supervisor-backend.git
 
 RUN cat ./Makefile
 
-RUN make all 
+RUN make all
 
 RUN ls -alh ./bin/*
 
@@ -114,13 +93,13 @@ FROM envoyproxy/envoy:v1.18.2 as ingress-envoy
 
 RUN ls -alh /etc/envoy
 
-RUN ls -alh /usr/local/bin/envoy* 
-RUN ls -alh /usr/local/bin/su-exec 
+RUN ls -alh /usr/local/bin/envoy*
+RUN ls -alh /usr/local/bin/su-exec
 RUN ls -alh /etc/envoy/envoy.yaml
-RUN ls -alh  /docker-entrypoint.sh 
+RUN ls -alh  /docker-entrypoint.sh
 
 
-# 
+#
 # Assembly all-in-one image
 #
 FROM postgres:14.5-bullseye as runner
@@ -148,7 +127,7 @@ RUN set -eux; \
 
 
 
-# 
+#
 # init working folder and users
 #
 RUN mkdir /opt/illa
@@ -158,7 +137,7 @@ RUN addgroup --system --gid 102 nginx \
     && adduser --group --system minio \
     && adduser --group --system redis \
     && adduser --group --system illa \
-    && cat /etc/group 
+    && cat /etc/group
 
 #
 # copy illa-builder-backend bin
@@ -173,8 +152,9 @@ COPY --from=illa-supervisor-backend /opt/illa/illa-supervisor-backend /opt/illa/
 #
 # copy illa-builder-frontend
 #
-COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/builder/dist /opt/illa/illa-builder-frontend
-COPY --from=illa-builder-frontend /opt/illa/illa-builder-frontend/apps/cloud/dist /opt/illa/illa-cloud-frontend
+COPY ./builder /opt/illa/illa-builder-frontend
+COPY ./cloud /opt/illa/illa-cloud-frontend
+
 
 
 #
@@ -190,17 +170,17 @@ RUN gosu --version; \
 RUN mkdir -p /opt/illa/cache-data/; \
     mkdir -p /opt/illa/redis/; \
     chown -fR redis:redis /opt/illa/cache-data/; \
-    chown -fR redis:redis /opt/illa/redis/; 
+    chown -fR redis:redis /opt/illa/redis/;
 
 
-COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark  
-COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof  
-COPY --from=cache-redis /usr/local/bin/redis-check-rdb /usr/local/bin/redis-check-rdb  
-COPY --from=cache-redis /usr/local/bin/redis-cli       /usr/local/bin/redis-cli        
-COPY --from=cache-redis /usr/local/bin/redis-sentinel  /usr/local/bin/redis-sentinel   
-COPY --from=cache-redis /usr/local/bin/redis-server    /usr/local/bin/redis-server      
+COPY --from=cache-redis /usr/local/bin/redis-benchmark /usr/local/bin/redis-benchmark
+COPY --from=cache-redis /usr/local/bin/redis-check-aof /usr/local/bin/redis-check-aof
+COPY --from=cache-redis /usr/local/bin/redis-check-rdb /usr/local/bin/redis-check-rdb
+COPY --from=cache-redis /usr/local/bin/redis-cli       /usr/local/bin/redis-cli
+COPY --from=cache-redis /usr/local/bin/redis-sentinel  /usr/local/bin/redis-sentinel
+COPY --from=cache-redis /usr/local/bin/redis-server    /usr/local/bin/redis-server
 
-COPY scripts/redis-entrypoint.sh    /opt/illa/redis  
+COPY scripts/redis-entrypoint.sh    /opt/illa/redis
 RUN chmod +x /opt/illa/redis/redis-entrypoint.sh
 
 
@@ -213,7 +193,7 @@ RUN mkdir -p /opt/illa/drive/; \
     chown -fR minio:minio /opt/illa/minio/;
 
 
-COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio 
+COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio
 
 COPY scripts/minio-entrypoint.sh /opt/illa/minio
 RUN chmod +x /opt/illa/minio/minio-entrypoint.sh
@@ -224,10 +204,10 @@ RUN chmod +x /opt/illa/minio/minio-entrypoint.sh
 #
 RUN mkdir /opt/illa/nginx
 
-COPY --from=webserver-nginx /usr/sbin/nginx  /usr/sbin/nginx 
-COPY --from=webserver-nginx /usr/lib/nginx   /usr/lib/nginx 
-COPY --from=webserver-nginx /etc/nginx       /etc/nginx 
-COPY --from=webserver-nginx /usr/share/nginx /usr/share/nginx 
+COPY --from=webserver-nginx /usr/sbin/nginx  /usr/sbin/nginx
+COPY --from=webserver-nginx /usr/lib/nginx   /usr/lib/nginx
+COPY --from=webserver-nginx /etc/nginx       /etc/nginx
+COPY --from=webserver-nginx /usr/share/nginx /usr/share/nginx
 
 COPY config/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY config/nginx/illa-builder-frontend.conf /etc/nginx/conf.d/
@@ -275,7 +255,7 @@ RUN chmod +x /opt/illa/envoy/envoy-entrypoint.sh \
 
 
 #
-# init database 
+# init database
 #
 RUN mkdir -p /opt/illa/database/ \
     && mkdir -p /opt/illa/postgres/
@@ -283,7 +263,7 @@ RUN mkdir -p /opt/illa/database/ \
 COPY scripts/postgres-entrypoint.sh  /opt/illa/postgres
 COPY scripts/postgres-init.sh /opt/illa/postgres
 RUN chmod +x /opt/illa/postgres/postgres-entrypoint.sh \
-    && chmod +x /opt/illa/postgres/postgres-init.sh 
+    && chmod +x /opt/illa/postgres/postgres-init.sh
 
 
 #
@@ -292,13 +272,13 @@ RUN chmod +x /opt/illa/postgres/postgres-entrypoint.sh \
 COPY scripts/main.sh /opt/illa/
 COPY scripts/pre-init.sh /opt/illa/
 COPY scripts/post-init.sh /opt/illa/
-RUN chmod +x /opt/illa/main.sh 
-RUN chmod +x /opt/illa/pre-init.sh 
-RUN chmod +x /opt/illa/post-init.sh 
+RUN chmod +x /opt/illa/main.sh
+RUN chmod +x /opt/illa/pre-init.sh
+RUN chmod +x /opt/illa/post-init.sh
 
 #
 # modify global permission
-#  
+#
 COPY config/system/group /opt/illa/
 RUN cat /opt/illa/group > /etc/group; rm /opt/illa/group
 RUN chown -fR illa:root /opt/illa
