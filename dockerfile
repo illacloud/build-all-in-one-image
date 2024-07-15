@@ -75,13 +75,9 @@ RUN ls -alh /usr/local/bin/redis*
 #
 # build minio
 #
-FROM minio/minio:RELEASE.2024-03-10T02-53-48Z as drive-minio
+FROM minio/minio:latest as drive-minio
 
-RUN echo "Starting minio build process..."
-
-RUN ls -alh /opt/bin
-
-RUN ls -alh /opt/bin/minio
+RUN ls -alh /usr/bin/minio
 
 #
 # build nginx
@@ -197,7 +193,7 @@ RUN mkdir -p /opt/illa/drive/; \
     chown -fR minio:minio /opt/illa/minio/;
 
 
-COPY --from=drive-minio /opt/bin/minio /usr/local/bin/minio
+COPY --from=drive-minio /usr/bin/minio /usr/local/bin/minio
 
 COPY scripts/minio-entrypoint.sh /opt/illa/minio
 RUN chmod +x /opt/illa/minio/minio-entrypoint.sh
