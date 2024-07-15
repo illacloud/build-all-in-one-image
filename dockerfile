@@ -75,7 +75,7 @@ RUN ls -alh /usr/local/bin/redis*
 #
 # build minio
 #
-FROM minio/minio:edge as drive-minio
+FROM minio/minio:latest as drive-minio
 
 RUN echo "Starting minio build process..."
 
